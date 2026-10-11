@@ -1,0 +1,7 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {Inventory,catalogue,validEan13,validEan8,validUpcA}=require('../core.js');
+test('synthetic identifiers pass checksum',()=>catalogue.forEach(p=>assert.ok(validEan13(p.code))));
+test('checksum rejects corruption and malformed values',()=>{assert.equal(validEan13('2000000000016'),false);assert.equal(validEan13('hello'),false);assert.equal(validEan8('00000000'),true);assert.equal(validUpcA('000000000000'),true);});
+test('counts units and converts packages',()=>{const i=new Inventory(),c=catalogue[0].code;assert.equal(i.scan(c),1);assert.equal(i.scan(c,2,6),13);assert.equal(i.rows()[0].difference,1);assert.equal(i.history.length,2);});
+test('correction records negative delta and permits zero',()=>{const i=new Inventory(),c=catalogue[0].code;i.scan(c,10);i.set(c,3);assert.equal(i.history.at(-1).delta,-7);assert.equal(i.set(c,0),0);});
+test('unknown and unsafe amounts do not mutate state',()=>{const i=new Inventory(),c=catalogue[0].code;for(const n of [-1,NaN,Infinity,1.5,100001])assert.throws(()=>i.scan(c,n));assert.throws(()=>i.scan('unknown'));assert.throws(()=>i.scan(c,100000,100000));assert.equal(i.history.length,0);});
+test('reset and separate sessions',()=>{const a=new Inventory(),b=new Inventory();a.scan(catalogue[0].code);assert.equal(b.rows()[0].count,0);a.reset();assert.equal(a.history.length,0);assert.equal(a.rows()[0].count,0);});
